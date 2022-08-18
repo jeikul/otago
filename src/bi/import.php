@@ -17,11 +17,11 @@
 	  $ltDate = strtotime ( $asDate ) ;
 		$lsDailyPath = "$gsOtagoPath/data/" . Date ( "Y/m/d", $ltDate ) ;
 		$lsSalesFile = sprintf ( "%s_%s_", $asRestaurant, $asChannel ) . Date ( "Ymd", $ltDate ) ;
-    print "Going to import $lsDailyPath/$lsSalesFile.*, using system " . ($asSystem == "" ? "default" : $asSystem) . "\r\n" ;
+    fnLog ( "Going to import $lsDailyPath/$lsSalesFile.*, using system " . ($asSystem == "" ? "default" : $asSystem) ) ;
 		$arrFiles = scandir ( $lsDailyPath ) ;
 		foreach ( $arrFiles as $strFile ) {
 		  if ( strncmp ( $strFile, $lsSalesFile, strlen ($lsSalesFile) ) == 0 ) {
-			  print "Going to import $strFile\r\n" ;
+			  fnLog ( "Going to import $strFile" ) ;
 				$liRestaurantID = fnGetValue ( "tbRestaurant", "fdAbbreviate='$asRestaurant'", "id" ) ;
 				$liChannelID = fnGetValue ( "tbChannel", "fdAbbreviate='$asChannel'", "id" ) ;
 				$liSystemID = fnGetValue ( "tbSystem", "fdAbbreviate='$asSystem'", "id" ) ;
@@ -39,7 +39,7 @@
 				  die ( "Error load excel: " . $e->getMessage() ) ;
 				}
 			  $liOrders = 0 ;
-				print "excel reading\r\n" ;
+				fnLog ( "excel reading" ) ;
 				if ( strcmp ( $asSystem, "mc") == 0 ) { // 美餐系统
 				  $sheet = $objPHPExcel->getSheet (0) ;
 					$liRows = $sheet->getHighestRow () ;
@@ -97,7 +97,7 @@
 							} // while
 						}
 					} // for i
-					print "$liOrders orders found\r\n" ;
+					fnLog ( "$liOrders orders found" ) ;
 				} else if ( strcmp ( $asSystem, "3n" ) == 0 ) { // 3N分销商城
 				  $sheet = $objPHPExcel->getSheet (0) ;
 					$liRows = $sheet->getHighestRow () ;
@@ -310,7 +310,9 @@
 									if ( $liAttachID == 0 )
 										$liAttachID = fnGetValue ( "tbAlias", "INSTR('$lsAttach',fdName)>0", "fdFoodID" ) ;
 									if ( $liAttachID > 0 ) {
-									  $lfAttachPrice = 0 + fnGetValue ( "tbFood", "id=$liAttachID", "fdAttachPrice" ) ;
+									  $lfAttachPrice = fnGetValue ( "tbFood", "id=$liAttachID", "fdAttachPrice" ) ;
+										if ( empty ( $lfAttachPrice ) )
+										  $lfAttachPrice = 0 ;
 										$lsSQL = "INSERT INTO tbOrder_Food (fdOrderID,fdFoodID,fdCount,fdAmount,fdName) VALUES ($liOrderID,$liAttachID,$liCount,$lfAttachPrice*$liCount,'$lsAttach')" ;
 										$lfAmount -= $lfAttachPrice * $liCount ;
 								    mysqli_query ( $dbLink, $lsSQL ) ;
@@ -319,7 +321,7 @@
 											mysql_exec ( $lsSQL ) ;
 										}
 								    fnLog ($lsSQL ) ;
-									} else {
+									} else if ( strcmp ( $lsAttach, "--" ) ) {
 								    print ( "Unknown attach $lsAttach\r\n" ) ;
 									}
 								}
@@ -470,9 +472,12 @@
 								$liFoodID = fnGetValue ( "tbAlias", "INSTR('$lsFood',fdName)>0", "fdFoodID" ) ;
 							if ( $liFoodID > 0 ) {
 						    if ( $lbMultiFoods ) {
-									$lfPrice = 0 + fnGetValue ( "tbPrice", "fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdFoodID=$liFoodID", "fdPrice" ) ;
-									if ( $lfPrice == 0 )
-										$lfPrice = 0 + fnGetValue ( "tbRestaurant_Food", "fdRestaurantID=$liRestaurantID AND fdFoodID=$liFoodID", "fdPrice" ) ;
+									$lfPrice = fnGetValue ( "tbPrice", "fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdFoodID=$liFoodID", "fdPrice" ) ;
+									if ( is_null ( $lfPrice ) ) {
+										$lfPrice = fnGetValue ( "tbRestaurant_Food", "fdRestaurantID=$liRestaurantID AND fdFoodID=$liFoodID", "fdPrice" ) ;
+										if ( is_null ( $lfPrice ) )
+										  $lfPrice = 0 ;
+									}
 									if ( $lfPrice == 0 )
 										$lfPrice = 0 + fnGetValue ( "tbFood", "id=$liFoodID", "fdPrice" ) ;
 									if ( $lfPrice == 0 )
@@ -509,7 +514,7 @@
 				  print "Unknown system $asSystem\r\n" ;
 				}
 			} else {
-			  print "Skipped $strFile\r\n" ;
+			  fnLog ( "Skipped $strFile" ) ;
 			}
 		}
 	}

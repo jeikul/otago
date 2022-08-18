@@ -10,6 +10,7 @@
 		  $liRestaurantID = $rowRestaurant["id"] ;
 			$lsSQL = "SELECT id,fdName FROM tbChannel" ;
 			$rsChannel = mysql_exec ( $lsSQL ) ;
+			// 先汇总所有独立渠道
 			while ( $rowChannel = mysqli_fetch_assoc ( $rsChannel ) ) {
         $liChannelID = $rowChannel["id"] ;
 				$lsSQL = "SELECT SUM(fdCount),SUM(tbOrder_Food.fdAmount)
@@ -37,6 +38,7 @@
 					mysql_exec ( $lsSQL ) ;
 				}
 			}
+			// 接下来汇总所有子渠道数据到上级渠道
 			mysqli_data_seek ( $rsChannel, 0 ) ;
 			while ( $rowChannel = mysqli_fetch_assoc ( $rsChannel ) ) {
         $liChannelID = $rowChannel["id"] ;
@@ -198,8 +200,8 @@
 
   mysql_init ( "localhost", "otago", "UTF8", "otago", "Otago@2022" ) ;
 
+	fnDailySummary ( $lsDate ) ;
   fnDailyFood ( $lsDate ) ;
 	fnDailyCategory ( $lsDate ) ;
 	fnDailyChannel ( $lsDate ) ;
-	fnDailySummary ( $lsDate ) ;
 ?>

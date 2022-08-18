@@ -1,6 +1,44 @@
+2022-08-18 支持点击产品日报产品名称转跳当天订单列表
+2022-08-17 clean up data before 2022-08-05. verified data since 2022-08-05.
+2022-08-16 turned some logs of import.php from terminal to files using fnLog()
+2022-08-15 get rid of some PHP warnings from import.php about fnGetValue() returning null values
+2022-08-14 增加门店销量排行daily_summary.php
+2022-08-13 fixed a bug, DailySummary() should be called before other DailyXXX() functions.
 2022-08-12 按分类统计增加了"份数"和"散点"
 2022-08-11 按渠道统计增加了"份数"
 2022-08-10 日报页面增加了门店筛选和日期前后切换功能
 2022-08-09 支持所有门店数据汇总
 2022-08-08 梳理了渠道和子渠道的业务逻辑，同时调整了统计算法
-2022-08-07 第一次上线，单店日报按渠道统计、按分类、按单品统计
+2022-08-07 第一次发布，单店日报按渠道统计、按分类、按单品统计
+2022-08-06 支持按单品统计daily_food
+2022-08-05 第一次采用麦芽田获得2家门店当天完整外卖数据，并支持麦芽田订单导入
+2022-08-04 支持按分类统计daily_category
+2022-08-03 支持按渠道统daily_channel
+2022-08-02 支持饿了么订单导入
+2022-08-01 支持美团外卖订单导入
+2022-07-31 支持丰食团餐订单导入
+2022-07-30 支持美团收银订单导入
+2022-07-29 支持3N小程序订单导入
+2022-07-28 美餐导入订单改用单店数据而不是全场数据
+2022-07-27 支持美餐订单导入
+2022-07-26 设计了{$restaurant}_{$channel}_{$date}.{$ext}订单文件命名规则
+2022-07-25 修改util项目源码复活fnLog()和fnFillList()
+2022-07-24 修改util项目源码支持mysqli
+2022-07-23 考古挖掘出util项目源码
+2022-07-22 在control架构内补充完善otago库基础数据
+2022-07-21 在control架构内录入otago库基础数据
+2022-07-20 创建git仓库，并第一次提交
+2022-07-19 修改完善otago数据库的control架构元数据
+2022-07-18 根据pdm构建otago数据库的control架构元数据
+2022-07-17 修改control项目源码还原control主要业务逻辑
+2022-07-16 修改control项目源码支持mysqli
+2022-07-15 搭建control数据库表
+2022-07-14 还原control数据库设计
+2022-07-13 考古挖掘出control项目源码
+2022-07-12 修订PDM
+2022-07-11 修订CDM
+2022-07-10 生成PDM
+2022-07-09 设计CDM
+2022-07-08 考古挖掘出power designer工具
+2022-06-30 设计了{$project}/data/{$year}/{$month}/{$day}目录结构，并由脚本自动创建
+2022-06-29 考古挖掘出Secure CRT工具

@@ -1,6 +1,6 @@
 /*==============================================================*/
 /* DBMS name:      MySQL 5.0                                    */
-/* Created on:     2022/7/15 20:11:28                           */
+/* Created on:     2022/7/31 20:58:53                           */
 /*==============================================================*/
 
 
@@ -26,9 +26,11 @@ drop table if exists tbOrder;
 
 drop table if exists tbOrder_Food;
 
-drop table if exists tbRestaunant;
+drop table if exists tbRestaurant;
 
-drop table if exists tbRestaunant_Food;
+drop table if exists tbRestaurant_Food;
+
+drop table if exists tbSystem;
 
 drop table if exists tbUnit;
 
@@ -37,7 +39,7 @@ drop table if exists tbUnit;
 /*==============================================================*/
 create table tbCategory
 (
-   id                   int not null,
+   id                   int not null auto_increment,
    fdName               varchar(64),
    primary key (id)
 );
@@ -61,8 +63,9 @@ alter table tbCategory_Food comment '²úÆ·¹éÊô·ÖÀàµÄ¶ÔÓ¦¹ØÏµ';
 /*==============================================================*/
 create table tbChannel
 (
-   id                   int not null,
+   id                   int not null auto_increment,
    fdName               varchar(64),
+   fdAbbreviate         varchar(16),
    primary key (id)
 );
 
@@ -74,10 +77,9 @@ alter table tbChannel comment 'ÏúÊÛÇşµÀ£¬ÈçÃÀÍÅÌÃÊ³¡¢ÃÀ²ÍÌÃÊ³¡¢ÃÀÍÅÍâÂô¡¢¶öÁËÃ´Í
 create table tbDailyChannel
 (
    id                   int,
-   fdRestaunantID       int,
+   fdRestaurantID       int,
    fdDate               date,
    fdChannelID          int,
-   fdRestaunantID2      int,
    fdIncome             float(10,2) comment 'Êµ¼ÊÊÕÈë',
    fdOrderCount         int comment '¶©µ¥ÊıÁ¿',
    fdServCount          numeric(8,1) comment '³ö²Í·İÊı'
@@ -92,9 +94,8 @@ create table tbDailyFood
 (
    id                   int,
    fdDate               date,
-   fdRestaunantID       int,
+   fdRestaurantID       int,
    fdFoodID             int,
-   fdRestaunantID2      int,
    fdPlanCount          numeric(8,1) comment '¼Æ»®ÊıÁ¿',
    fdServCount          numeric(8,1) comment '³ö²Í·İÊı',
    fdIncome             float(10,2) comment 'Êµ¼ÊÊÕÈë'
@@ -109,7 +110,7 @@ create table tbDailySummary
 (
    id                   int,
    fdDate               date,
-   fdRestaunantID       int,
+   fdRestaurantID       int,
    fdServCount          numeric(8,1) comment '³ö²Í·İÊı',
    fdIncome             float(10,2) comment 'Êµ¼ÊÊÕÈë'
 );
@@ -122,10 +123,9 @@ alter table tbDailySummary comment '¸÷ÃÅµêÏúÁ¿ÈÕ±¨';
 create table tbDaily_Category
 (
    id                   int,
-   fdRestaunantID       int,
+   fdRestaurantID       int,
    fdDate               date,
    fdCategoryID         int,
-   fdRestaunantID2      int,
    fdServCount          numeric(8,1) comment '³ö²Í·İÊı',
    fdIncome             float(10,2) comment 'Êµ¼ÊÊÕÈë'
 );
@@ -137,10 +137,9 @@ alter table tbDaily_Category comment '¸÷·ÖÀà²úÆ·µÄÏúÁ¿ÈÕ±¨';
 /*==============================================================*/
 create table tbFood
 (
-   id                   int not null,
+   id                   int not null auto_increment,
    fdUnitID             int,
    fdName               varchar(64),
-   fdUnitID2            int,
    fdProduct            bool comment 'True-²úÆ·£»False-Ê³²Ä',
    fdOutputRate         float comment '³öÁÏÂÊ',
    primary key (id)
@@ -155,7 +154,6 @@ create table tbFormula
 (
    id                   int,
    fdProductFoodID      int,
-   fdProductFoodID2     int comment '³ÉÆ·»ò°ë³ÉÆ·±êÊ¶',
    fdProductQuantity    numeric(8,2) comment '³ÉÆ·»ò°ë³ÉÆ·ÊıÁ¿',
    fdIngredientsFoodID  int comment 'Ê³²Ä±êÊ¶',
    fdIngredientsQuantity numeric(8,2) comment 'Ê³²ÄÊıÁ¿'
@@ -169,9 +167,9 @@ alter table tbFormula comment 'Åä·½±í';
 create table tbOrder
 (
    id                   int not null,
+   tbS_id               int,
    fdDateTime           datetime,
-   fdRestaunantID2      int,
-   fdChannelID2         int,
+   fdSystemID           int,
    fdAmount             float(8,2) comment 'È«µ¥½ğ¶î',
    fdTakeAway           bool comment 'È«µ¥´ò°ü',
    fdRestaunantID       int,
@@ -197,21 +195,22 @@ create table tbOrder_Food
 alter table tbOrder_Food comment '¶©µ¥ÉÌÆ·Ã÷Ï¸';
 
 /*==============================================================*/
-/* Table: tbRestaunant                                          */
+/* Table: tbRestaurant                                          */
 /*==============================================================*/
-create table tbRestaunant
+create table tbRestaurant
 (
-   id                   int not null,
+   id                   int not null auto_increment,
    fdName               varchar(64),
+   fdAbbreviate         varchar(16),
    primary key (id)
 );
 
-alter table tbRestaunant comment 'ÃÅµê';
+alter table tbRestaurant comment 'ÃÅµê';
 
 /*==============================================================*/
-/* Table: tbRestaunant_Food                                     */
+/* Table: tbRestaurant_Food                                     */
 /*==============================================================*/
-create table tbRestaunant_Food
+create table tbRestaurant_Food
 (
    fdRestaunantID       int not null,
    fdFoodID             int not null,
@@ -220,14 +219,26 @@ create table tbRestaunant_Food
    primary key (fdRestaunantID, fdFoodID)
 );
 
-alter table tbRestaunant_Food comment '²úÆ·ÔÚ¸÷ÃÅµêÉÏ¼Ü';
+alter table tbRestaurant_Food comment '²úÆ·ÔÚ¸÷ÃÅµêÉÏ¼Ü';
+
+/*==============================================================*/
+/* Table: tbSystem                                              */
+/*==============================================================*/
+create table tbSystem
+(
+   id                   int not null auto_increment,
+   fdName               varchar(64),
+   primary key (id)
+);
+
+alter table tbSystem comment 'Íâ²¿ÏµÍ³';
 
 /*==============================================================*/
 /* Table: tbUnit                                                */
 /*==============================================================*/
 create table tbUnit
 (
-   id                   int not null,
+   id                   int not null auto_increment,
    fdName               varchar(64),
    primary key (id)
 );
@@ -243,23 +254,23 @@ alter table tbCategory_Food add constraint FK_Category_Food2 foreign key (fdFood
 alter table tbDailyChannel add constraint FK_Channel_DailyChannel foreign key (fdChannelID)
       references tbChannel (id) on delete restrict on update restrict;
 
-alter table tbDailyChannel add constraint FK_Restaunant_DailyChannel foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+alter table tbDailyChannel add constraint FK_Restaunant_DailyChannel foreign key (fdRestaurantID)
+      references tbRestaurant (id) on delete restrict on update restrict;
 
 alter table tbDailyFood add constraint FK_Food_DailyFood foreign key (fdFoodID)
       references tbFood (id) on delete restrict on update restrict;
 
-alter table tbDailyFood add constraint FK_Restaunant_DailyFood foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+alter table tbDailyFood add constraint FK_Restaunant_DailyFood foreign key (fdRestaurantID)
+      references tbRestaurant (id) on delete restrict on update restrict;
 
-alter table tbDailySummary add constraint FK_Restaunant_DailySummary foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+alter table tbDailySummary add constraint FK_Restaunant_DailySummary foreign key (fdRestaurantID)
+      references tbRestaurant (id) on delete restrict on update restrict;
 
 alter table tbDaily_Category add constraint FK_Category_DailyCategory foreign key (fdCategoryID)
       references tbCategory (id) on delete restrict on update restrict;
 
-alter table tbDaily_Category add constraint FK_Restaunant_DailyCategory foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+alter table tbDaily_Category add constraint FK_Restaunant_DailyCategory foreign key (fdRestaurantID)
+      references tbRestaurant (id) on delete restrict on update restrict;
 
 alter table tbFood add constraint FK_Unit_Food foreign key (fdUnitID)
       references tbUnit (id) on delete restrict on update restrict;
@@ -274,7 +285,10 @@ alter table tbOrder add constraint FK_Channel_Order foreign key (fdChannelID)
       references tbChannel (id) on delete restrict on update restrict;
 
 alter table tbOrder add constraint FK_Restaunant_Order foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+      references tbRestaurant (id) on delete restrict on update restrict;
+
+alter table tbOrder add constraint FK_System_Order foreign key (fdSystemID)
+      references tbSystem (id) on delete restrict on update restrict;
 
 alter table tbOrder_Food add constraint FK_Order_Food foreign key (fdFoodID)
       references tbOrder (id) on delete restrict on update restrict;
@@ -282,9 +296,9 @@ alter table tbOrder_Food add constraint FK_Order_Food foreign key (fdFoodID)
 alter table tbOrder_Food add constraint FK_Order_Food2 foreign key (fdFoodID)
       references tbFood (id) on delete restrict on update restrict;
 
-alter table tbRestaunant_Food add constraint FK_Restaunant_Food foreign key (fdRestaunantID)
-      references tbRestaunant (id) on delete restrict on update restrict;
+alter table tbRestaurant_Food add constraint FK_Restaurant_Food foreign key (fdRestaunantID)
+      references tbRestaurant (id) on delete restrict on update restrict;
 
-alter table tbRestaunant_Food add constraint FK_Restaunant_Food2 foreign key (fdFoodID)
+alter table tbRestaurant_Food add constraint FK_Restaurant_Food2 foreign key (fdFoodID)
       references tbFood (id) on delete restrict on update restrict;
 

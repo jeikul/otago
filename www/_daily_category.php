@@ -1,5 +1,6 @@
 <table class="simple">
 	<?php
+	  $lbLinkOrderFood = true ;
 		$liServSummary = 0 ;
 		$liFoodSummary = 0 ;
 		$liIncomeSummary = 0 ;
@@ -24,11 +25,30 @@
 			$lsSQL = "SELECT fdCategoryID,tbCategory.fdName,fdServCount,fdIncome FROM tbDailyCategory LEFT JOIN tbCategory ON tbCategory.id=fdCategoryID WHERE fdDate='$lsDate' AND fdRestaurantID=$liRestaurantID ORDER BY fdIncome DESC,fdServCount DESC" ;
 		$rsDailyFood = mysql_exec ( $lsSQL ) ;
 		while ( $rowDailyFoods = mysqli_fetch_assoc ( $rsDailyFood ) ) {
+			print "<tr><td>" ;
+			if ( $lbLinkOrderFood ) {
+				$liCategoryID = $rowDailyFoods["fdCategoryID"] ;
+				$lsSQL = "SELECT fdOrderID FROM (tbOrder_Food LEFT JOIN tbOrder ON tbOrder.id=fdOrderID) LEFT JOIN tbCategory_Food ON tbCategory_Food.fdFoodID=tbOrder_Food.fdFoodID WHERE fdCategoryID=$liCategoryID AND fdDateTime>='$lsDate' AND fdDateTime<DATE_ADD('$lsDate', INTERVAL 1 DAY)" ;
+				if ( $liRestaurantID > 0 )
+					$lsSQL .= " AND fdRestaurantID=$liRestaurantID" ;
+				$lsClause = "" ;
+				$rsOrderIDs = mysql_exec ( $lsSQL ) ;
+				while ( $rowOrderID = mysqli_fetch_assoc ( $rsOrderIDs ) ) {
+					$lsClause .= (strlen ( $lsClause ) == 0 ? "(" : ",") ;
+					$lsClause .= $rowOrderID["fdOrderID"] ;
+				}
+				$lsClause .= ")" ;
+				print "<a href='/otago/its/controls.php?table=tbOrder&clause=id IN $lsClause'>" ;
+			}
+			print $rowDailyFoods["fdName"] ;
+			if ( $lbLinkOrderFood )
+				print "</a>" ;
+			print "</td>" ;
 		  if ( $rowDailyFoods["fdCategoryID"] < 9 ) {
-				print "<tr><td>" . $rowDailyFoods["fdName"] . "</td><td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td /><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
+				print "<td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td /><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
 			  $liServSummary += $rowDailyFoods["fdServCount"] ;
 			} else {
-				print "<tr><td>" . $rowDailyFoods["fdName"] . "</td><td /><td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
+				print "<td /><td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
 			  $liFoodSummary += $rowDailyFoods["fdServCount"] ;
 			}
 			$liIncomeSummary += $rowDailyFoods["fdIncome"] ;

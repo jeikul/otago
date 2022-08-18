@@ -15,6 +15,13 @@
 </head>
 <body>
   <div style="float: left; margin-right: 10px;">
+  <?php
+	  if ( isset($_GET["restaurant"]) == false ) {
+		  include_once "_daily_summary.php" ;
+		}
+	?>
+	</div>
+  <div style="float: left; margin-right: 10px;">
     <?php include_once "_daily_channel.php" ; ?>
 	</div>
   <div style="float: left; margin-right: 10px;">
