@@ -60,6 +60,7 @@
 <?php
   function fnDrawA_Row ( $rs, $asCaption, $asField, $asAlign = "right", $asSummaryCaption = NULL, $asLeftCaption = NULL )
 	{
+	  global $liRestaurantID ;
 		print "<tr>\r\n" ;
 		if ( ! is_null ( $asLeftCaption ) ) {
 		  if ( strcmp ( $asLeftCaption, "" ) == 0 )
@@ -79,7 +80,18 @@
 			  print " class=weekend" ;
 			else
 			  print " class=weekday" ;
-			print ">" . ($data > 0 ? $data : "") . "</td>\r\n" ;
+			print ">" ;
+			if ( strcmp ( $asField, "fdDay" ) == 0 ) {
+			  print "<a href='daily.php?date=" . $row["fdDate"] ;
+				if ( $liRestaurantID > 0 )
+				  print "&restaurant=" . fnGetValue ( "tbRestaurant", "id=$liRestaurantID", "fdAbbreviate" ) ;
+				print "'>" ;
+			}
+			if ( $data > 0 )
+			  print $data ;
+			if ( strcmp ( $asField, "fdDay" ) == 0 )
+			  print "</a>" ;
+			print "</td>\r\n" ;
 		}
 		if ( is_null ( $asSummaryCaption ) )
 			print "<td align=$asAlign class=summary>" . $summary . "</td>\r\n" ;
