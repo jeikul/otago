@@ -1,3 +1,4 @@
+2022-08-19 支持丰食自提
 2022-08-18 支持点击产品日报产品名称转跳当天订单列表
 2022-08-17 clean up data before 2022-08-05. verified data since 2022-08-05.
 2022-08-16 turned some logs of import.php from terminal to files using fnLog()

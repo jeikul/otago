@@ -7,7 +7,7 @@
 		else
 			$lsDate = Date ( "Y-m-d", time() - 21 * 3600 ) ;
 		$i = $liOrderrSummary = $liServSummary = $lfIncomeSummary = 0 ;
-	  $lsSQL = "SELECT fdRestaurantID,fdName,fdOrderCount,fdServCount,fdIncome FROM tbDailySummary LEFT JOIN tbRestaurant ON tbRestaurant.id=fdRestaurantID WHERE fdDate='$lsDate' ORDER by fdIncome DESC" ;
+	  $lsSQL = "SELECT fdRestaurantID,fdName,fdOrderCount,fdServCount,fdIncome FROM tbDailySummary LEFT JOIN tbRestaurant ON tbRestaurant.id=fdRestaurantID WHERE fdDate='$lsDate' ORDER BY fdIncome DESC" ;
 		$rsDailySummary = mysql_exec ( $lsSQL ) ;
 		while ( $rowDailySummary = mysqli_fetch_assoc ( $rsDailySummary ) ) {
 		  print "<tr><td align='center'>" . ( ++$i ) . "</td>" ;
