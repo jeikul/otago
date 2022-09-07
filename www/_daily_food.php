@@ -1,5 +1,9 @@
 <table class="simple">
 	<?php
+	  if ( strstr ( $_SERVER["PHP_SELF"], "daily_food" ) )
+		  $lbFoodReportOnly = true ;
+		else
+		  $lbFoodReportOnly = false ;
 	  $lbLinkOrderFood = true ;
 		$liServSummary = 0 ;
 		$liIncomeSummary = 0 ;
@@ -16,12 +20,17 @@
 			$lsDate = Date ( "Y-m-d", time() - 21 * 3600 ) ;
 		print "<caption>$lsRestaurant<br>$lsDate<br>产品销量排行</caption>\r\n" ;
 	?>
-	<tr><td>名称</td><td align="center">件数</td><td align="right">金额</td></tr>
+	<tr><td>名称</td>
+	<?php
+	  if ( $lbFoodReportOnly )
+		  print "<td align='center'>计划</td>" ;
+	?>
+	<td align="center">件数</td><td align="right">金额</td></tr>
 	<?php
 	  if ( $liRestaurantID == 0 )
-			$lsSQL = "SELECT fdFoodID,MAX(tbFood.fdName) AS fdName,SUM(fdServCount) AS fdServCount,SUM(fdIncome) AS fdIncome FROM tbDailyFood LEFT JOIN tbFood ON tbFood.id=fdFoodID WHERE fdDate='$lsDate' GROUP BY fdFoodID ORDER BY fdIncome DESC,fdServCount DESC" ;
+			$lsSQL = "SELECT fdFoodID,MAX(tbFood.fdName) AS fdName,SUM(fdPlanCount) AS fdPlanCount,SUM(fdServCount) AS fdServCount,SUM(fdIncome) AS fdIncome FROM tbDailyFood LEFT JOIN tbFood ON tbFood.id=fdFoodID WHERE fdDate='$lsDate' GROUP BY fdFoodID ORDER BY fdIncome DESC,fdServCount DESC" ;
 		else
-			$lsSQL = "SELECT fdFoodID,tbFood.fdName,fdServCount,fdIncome FROM tbDailyFood LEFT JOIN tbFood ON tbFood.id=fdFoodID WHERE fdDate='$lsDate' AND fdRestaurantID=$liRestaurantID ORDER BY fdIncome DESC,fdServCount DESC" ;
+			$lsSQL = "SELECT fdFoodID,tbFood.fdName,fdPlanCount,fdServCount,fdIncome FROM tbDailyFood LEFT JOIN tbFood ON tbFood.id=fdFoodID WHERE fdDate='$lsDate' AND fdRestaurantID=$liRestaurantID ORDER BY fdIncome DESC,fdServCount DESC" ;
 		$rsDailyFood = mysql_exec ( $lsSQL ) ;
 		while ( $rowDailyFood = mysqli_fetch_assoc ( $rsDailyFood ) ) {
 			print "<tr><td>" ;
@@ -42,11 +51,19 @@
 			print $rowDailyFood["fdName"] ;
 			if ( $lbLinkOrderFood )
 			  print "</a>" ;
-			print "</td><td align='center'>" . intval ($rowDailyFood["fdServCount"]) . "</td><td align='right'>" . $rowDailyFood["fdIncome"] . "</td></tr>\r\n" ;
+			print "</td>" ;
+			if ( $lbFoodReportOnly )
+			  print "<td>" . $rowDailyFood["fdPlanCount"] . "</td>" ;
+			print "<td align='center'>" . intval ($rowDailyFood["fdServCount"]) . "</td><td align='right'>" . $rowDailyFood["fdIncome"] . "</td></tr>\r\n" ;
 			$liServSummary += $rowDailyFood["fdServCount"] ;
 			$liIncomeSummary += $rowDailyFood["fdIncome"] ;
 		}
 		mysqli_free_result ( $rsDailyFood ) ;
 	?>
-	</tr><td>合计</td><td align="center"><?php print $liServSummary; ?></td><td align="right"><?php print $liIncomeSummary; ?></td></tr>
+	</tr><td>合计</td>
+	<?php
+	  if ( $lbFoodReportOnly )
+		  print "<td />" ;
+	?>
+	<td align="center"><?php print $liServSummary; ?></td><td align="right"><?php print $liIncomeSummary; ?></td></tr>
 </table>

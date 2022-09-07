@@ -97,7 +97,7 @@
 							} // while
 						}
 					} // for i
-					fnLog ( "$liOrders orders found" ) ;
+					print "$liOrders orders found\r\n" ;
 				} else if ( strcmp ( $asSystem, "3n" ) == 0 ) { // 3N分销商城
 				  $sheet = $objPHPExcel->getSheet (0) ;
 					$liRows = $sheet->getHighestRow () ;
@@ -572,7 +572,7 @@
   $lsRestaurant = $lsChannel = $lsSystem = "" ;
 	$argOptions = getopt ( "c:d:r:s:v" ) ;
 	if ( array_key_exists ( "v", $argOptions ) ) {
-		print "Usage: php import.php -r <restaurant> -c <channel> -s <system> [-d <yyyy-mm-dd>]\r\nExample: php import.php -r tiande -c hall -s mc -d 20220801\r\n" ;
+		print "Usage: php import.php -r <restaurant> -c <channel> -s <system> [-d <yyyy-mm-dd>]\r\nExample: php import.php -r tiande -c self -s 3n -d 20220801\r\n" ;
 		exit ;
 	} else {
 	  if ( array_key_exists ( "r", $argOptions ) )

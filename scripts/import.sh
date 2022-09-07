@@ -7,5 +7,6 @@ php import.php -r tiande -c beike -s 3n
 php import.php -r tiande -c self -s 3n
 php import.php -r gaozhi -c mtpos -s mtpos
 php import.php -r gaozhi -c mini -s 3n
+php import.php -r gaozhi -c yf -s 3n
 php import.php -s myt
 php daily.php 

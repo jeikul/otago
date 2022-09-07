@@ -152,7 +152,7 @@
 				$liIncomeSummary += $rowOrder["fdAmount"] ;
 				$liOrderServCount = 0 ;
 				$liServAmount = 0 ;
-				$lsSQL = "SELECT fdFoodID,fdCount,fdName FROM tbOrder_Food WHERE fdOrderID=" . $rowOrder["id"] ;
+				$lsSQL = "SELECT fdFoodID,fdCount,fdAmount,fdName FROM tbOrder_Food WHERE fdOrderID=" . $rowOrder["id"] ;
 				$rsOrderFood = mysql_exec ( $lsSQL ) ;
 				while ( $rowOrderFood = mysqli_fetch_assoc ( $rsOrderFood ) ) {
 			    $liCategoryCount = fnGetValue ( "tbCategory_Food", "fdFoodID=" . $rowOrderFood["fdFoodID"] . " AND fdCategoryID<9", "COUNT(fdCategoryID)" ) ;
@@ -161,11 +161,15 @@
 					else {
 			      $liCategoryCount = fnGetValue ( "tbCategory_Food", "fdFoodID=" . $rowOrderFood["fdFoodID"] . " AND fdCategoryID IN (9,10,12)", "COUNT(fdCategoryID)" ) ;
 						if ( $liCategoryCount > 0 ) {
-						  $lfListPrice = fnGetValue ( "tbFood", "id=" . $rowOrderFood["fdFoodID"], "fdPrice" ) ;
-							if ( "$lfListPrice" == "" ) {
-								print "Price missed, " . $rowOrderFood["fdName"] . "(liFoodID=" . $rowOrderFood["fdFoodID"] . ")\r\n" ;
-							} else
-						    $liServAmount += 0 + $lfListPrice ;
+						  if ( $rowOrderFood["fdAmount"] > 0 )
+							  $liServAmount += $rowOrderFood["fdAmount"] ;
+							else {
+								$lfListPrice = fnGetValue ( "tbFood", "id=" . $rowOrderFood["fdFoodID"], "fdPrice" ) ;
+								if ( "$lfListPrice" == "" ) {
+									print "Price missed, " . $rowOrderFood["fdName"] . "(liFoodID=" . $rowOrderFood["fdFoodID"] . ")\r\n" ;
+								} else
+									$liServAmount += 0 + $lfListPrice ;
+							}
 						}
 					}
 				}
