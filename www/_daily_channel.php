@@ -1,5 +1,5 @@
 <?php
-  include_once "change_restaurant.php" ;
+  include_once "change_filter.php" ;
 ?>
 <table class="simple">
 	<?php
@@ -19,7 +19,7 @@
 			$lsDate = Date ( "Y-m-d", strtotime ( $_GET["date"] ) ) ;
 		else
 			$lsDate = Date ( "Y-m-d", time() - 21 * 3600 ) ;
-		print "<caption><select name=lstRestaurant onchange='fnChangeRestaurant()'>\r\n" ;
+		print "<caption><select name=lstRestaurant onchange='fnChangeFilter()'>\r\n" ;
 		fnFillList ( "SELECT fdAbbreviate,fdName FROM tbRestaurant", $lsRestaurantSelected, false, "全部门店" ) ;
 		$ltDate = strtotime ( $lsDate ) ;
 		$lsLastDate = date ( 'Ymd', $ltDate - 24 * 3600 ) ;

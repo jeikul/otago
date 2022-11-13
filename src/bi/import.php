@@ -107,7 +107,10 @@
 						$liOrders ++ ;
 						$lsSerial = $sheet->getCell ("A$i")->getValue () ;
 						$lsDatetime = $sheet->getCell ("AA$i")->getValue () ;
-						$lsAmount = $sheet->getCell ("S$i")->getValue () ;
+						if ( strcmp ( $asChannel, "yf" ) == 0 )
+						  $lsAmount = $sheet->getCell ("S$i")->getValue () ;
+						else
+						  $lsAmount = $sheet->getCell ("Q$i")->getValue () ;
 						$liOrderID = fnGetValue ( "tbOrder", "fdSerial='$lsSerial'", "id" ) ;
 						if ( $liOrderID > 0 )
 							$lsSQL = "UPDATE tbOrder SET fdDatetime='$lsDatetime',fdRestaurantID=$liRestaurantID,fdChannelID=$liChannelID,fdSystemID=$liSystemID,fdAmount=$lsAmount WHERE fdSerial='$lsSerial'" ;
@@ -122,7 +125,9 @@
 						  $lsFood = $sheet->getCell ("C$j")->getValue () ;
 							fnLog ( "1.lsFood=$lsFood" ) ;
 							$liCount = $sheet->getCell ( "F$j" )->getValue () ;
-							$lsAmount = $sheet->getCell ( "M$j" )->getValue () ;
+							$lsAmount = (float)($sheet->getCell ( "M$j" )->getValue ()) - (float)($sheet->getCell ( "G$j" )->getValue ()) - (float)($sheet->getCell ( "H$j" )->getValue ()) ;
+							if ( strcmp ( $asChannel, "yf" ) != 0 && strcmp ( $lsFood, "voucher" ) != 0 )
+							  $lsAmount -= (float)($sheet->getCell ( "I$j" )->getValue ()) ;
 							$liFoodID = fnGetValue ( "tbFood", "fdName='$lsFood'", "id" ) ;
 							if ( $liFoodID == 0 )
 								$liFoodID = fnGetValue ( "tbAlias", "fdName='$lsFood'", "fdFoodID" ) ;
@@ -275,7 +280,7 @@
 						$liOrders ++ ;
 						$lsSerial = $sheet->getCell ("A$i")->getValue () ;
 						$lsDatetime = $sheet->getCell ("F$i")->getValue () ;
-						$lsAmount = $sheet->getCell ("O$i")->getValue () ;
+						$lsAmount = $sheet->getCell ("L$i")->getValue () ;
 						$liOrderID = fnGetValue ( "tbOrder", "fdSerial='$lsSerial'", "id" ) ;
 						if ( $liOrderID > 0 )
 							$lsSQL = "UPDATE tbOrder SET fdDatetime='$lsDatetime',fdRestaurantID=$liRestaurantID,fdChannelID=$liChannelID,fdSystemID=$liSystemID,fdAmount=$lsAmount WHERE fdSerial='$lsSerial'" ;
@@ -444,6 +449,56 @@
 						}
 					} // for i
 					print "$liOrders orders found\r\n" ;
+				} else if ( strcmp ( $asSystem, "youfan") == 0 ) { // 悠饭团餐
+				  $sheet = $objPHPExcel->getSheet (0) ;
+					$liRows = $sheet->getHighestRow () ;
+					print "$liRows rows found.\r\n" ;
+					for ( $i = 2; $i <= $liRows; $i ++ ) {
+						$liOrders ++ ;
+						$lsSerial = $sheet->getCell ("A$i")->getValue () ;
+						$lsDatetime = $sheet->getCell ("B$i")->getValue () ;
+						$lsFoods = $sheet->getCell ("H$i")->getValue () ;
+						$lsAmount = $sheet->getCell ("I$i")->getValue () ;
+						$liOrderID = fnGetValue ( "tbOrder", "fdSerial='$lsSerial'", "id" ) ;
+						if ( $liOrderID > 0 )
+							$lsSQL = "UPDATE tbOrder SET fdDatetime='$lsDatetime',fdRestaurantID=$liRestaurantID,fdChannelID=$liChannelID,fdSystemID=$liSystemID,fdAmount=$lsAmount*0.85 WHERE fdSerial='$lsSerial'" ;
+						else
+							$lsSQL = "INSERT INTO tbOrder (fdSerial,fdDatetime,fdRestaurantID,fdChannelID,fdSystemID,fdAmount ) VALUES ('$lsSerial','$lsDatetime',$liRestaurantID,$liChannelID,$liSystemID,$lsAmount*0.85)" ;
+						mysql_exec ( $lsSQL ) ;
+						if ( $liOrderID == 0 )
+							$liOrderID = mysqli_insert_id ( $dbLink ) ;
+						fnLog ( "liOrderID=$liOrderID,$lsFoods" ) ;
+						$lsSQL = "DELETE FROM tbOrder_Food WHERE fdOrderID=$liOrderID" ;
+						mysql_exec ( $lsSQL ) ;
+						$lsFood = strtok ( $lsFoods, "," ) ;
+						while ( $lsFood != false ) {
+							fnLog ( "1.lsFood=$lsFood" ) ;
+							$liCount = $sheet->getCell ("O$i")->getValue () ;
+							$liFoodID = fnGetValue ( "tbFood", "fdName='$lsFood'", "id" ) ;
+							if ( $liFoodID == 0 )
+								$liFoodID = fnGetValue ( "tbAlias", "fdName='$lsFood'", "fdFoodID" ) ;
+							if ( $liFoodID == 0 )
+								$liFoodID = fnGetValue ( "tbFood", "INSTR('$lsFood',fdName)>0", "id" ) ;
+							if ( $liFoodID == 0 )
+								$liFoodID = fnGetValue ( "tbAlias", "INSTR('$lsFood',fdName)>0", "fdFoodID" ) ;
+							if ( $liFoodID > 0 ) {
+								//print "ready $lsFood\r\n" ;
+								$lsSQL = "INSERT INTO tbOrder_Food (fdOrderID,fdFoodID,fdCount,fdAmount,fdName) VALUES ($liOrderID,$liFoodID,$liCount,$lsAmount*0.85,'$lsFood')" ;
+								mysqli_query ( $dbLink, $lsSQL ) ;
+								if ( mysqli_errno ( $dbLink ) == 1062 ) {
+									$lsSQL = "UPDATE tbOrder_Food SET fdCount=fdCount+$liCount,fdAmount=fdAmount+$lsAmount*0.85 WHERE fdOrderID=$liOrderID AND fdFoodID=$liFoodID" ;
+									mysql_exec ( $lsSQL ) ;
+								}
+								fnLog ($lsSQL ) ;
+								// $lsFoodMatched = fnGetValue ( "tbFood", "id=$liFoodID", "fdName" ) ;
+								// print ( "Matched $lsFood as $lsFoodMatched\r\n" ) ;
+							} else {
+								print ( "Unknown food $lsFood\r\n" ) ;
+							}
+							$lsFood = strtok ( "," ) ;
+						}
+					} // for i
+					print "$liOrders orders found\r\n" ;
 				} else if ( strcmp ( $asSystem, "myt") == 0 ) { // 麦芽田
 				  if ( $gbUseXML ) {
 						$rows = $objXML->Worksheet->Table->Row ;
@@ -454,7 +509,6 @@
 					}
 					print "$liRows rows found.\r\n" ;
 					for ( $i = 2; $i <= $liRows; $i ++ ) {
-						$liOrders ++ ;
 						if ( $gbUseXML ) {
 							$cells = $rows[$i-1]->Cell ;
 							$lsSerial = substr ( $cells[5]->Data, 1 ) ;
@@ -463,6 +517,7 @@
 							$lsAmount = $cells[19]->Data ;
 							$lsRestaurant = $cells[24]->Data ;
 							$lsChannel = $cells[1]->Data ;
+							$lsStatus = $cells[3]->Data ;
 						} else {
 							$lsSerial = substr ( $sheet->getCell ("F$i")->getValue (), 1 ) ;
 							$lsDatetime = $sheet->getCell ("H$i")->getValue () ;
@@ -470,93 +525,102 @@
 							$lsAmount = $sheet->getCell ("T$i")->getValue () ;
 				      $lsRestaurant = $sheet->getCell ("Y$i")->getValue () ;
 							$lsChannel = $sheet->getCell ("B$i")->getValue () ;
+							$lsStatus = $sheet->getCell ("D$i")->getValue () ;
 						}
-				    $liRestaurantID = fnGetValue ( "tbRestaurant", "fdAbbreviate='$lsRestaurant'", "id" ) ;
-				    $liChannelID = fnGetValue ( "tbChannel", "fdAbbreviate='" . (strcmp ($lsChannel, "美团") == 0 ? "mt" : "ele") . "'", "id" ) ;
-						$liOrderID = fnGetValue ( "tbOrder", "fdSerial='$lsSerial'", "id" ) ;
-						if ( $liOrderID > 0 )
-							$lsSQL = "UPDATE tbOrder SET fdDatetime='$lsDatetime',fdRestaurantID=$liRestaurantID,fdChannelID=$liChannelID,fdSystemID=$liSystemID,fdAmount=$lsAmount WHERE fdSerial='$lsSerial'" ;
-						else
-							$lsSQL = "INSERT INTO tbOrder (fdSerial,fdDatetime,fdRestaurantID,fdChannelID,fdSystemID,fdAmount ) VALUES ('$lsSerial','$lsDatetime',$liRestaurantID,$liChannelID,$liSystemID,$lsAmount)" ;
-						mysql_exec ( $lsSQL ) ;
-						if ( $liOrderID == 0 )
-							$liOrderID = mysqli_insert_id ( $dbLink ) ;
-						fnLog ( "liOrderID=$liOrderID,$lsFoods" ) ;
-						$lsSQL = "DELETE FROM tbOrder_Food WHERE fdOrderID=$liOrderID" ;
-						mysql_exec ( $lsSQL ) ;
-						// print "lsFoods=$lsFoods\r\n" ; 
-						$lbMultiFoods = $lbQuoted = false ;
-						for ( $j = 0; $j < mb_strlen ( $lsFoods ); $j ++ ) {
-						  $chr = mb_substr ( $lsFoods, $j, 1 ) ;
-						  if ( strcmp ( $chr, '[' ) == 0 )
-							  $lbQuoted = true ;
-							else if ( strcmp ( $chr, ']' ) == 0 )
-							  $lbQuoted = false ;
-							else if ( strcmp ( $chr, "+" ) == 0 ) {
-							  if ( $lbQuoted )
-							    $lsFoods = mb_substr ( $lsFoods, 0, $j ) . "&" . mb_substr ( $lsFoods, $j + 1 ) ;
-								else
-								  $lbMultiFoods = true ;
-							}
-						}
-						$lfOriginAmount = 0 ;
-						$arrFoodIDs = array () ;
-						$arrPrices = array () ;
-						$lsFood = strtok ( $lsFoods, "+" ) ;
-						while ( $lsFood != false ) {
-						  $liPos = mb_strpos ( $lsFood, '[' ) ;
-							if ( $liPos === false )
-						    $liPos = mb_strpos ( $lsFood, '|' ) ;
-							if ( $liPos > 0 )
-							  $lsFood = trim ( mb_substr ( $lsFood, 0, $liPos ) ) ;
-							if ( $gbUseXML )
-							  $liCount = $lbMultiFoods ? 1 : $cells[22]->Data ;
+						fnLog ( "lsStatus=$lsStatus" ) ;
+						$liRestaurantID = fnGetValue ( "tbRestaurant", "fdAbbreviate='$lsRestaurant'", "id" ) ;
+						$liChannelID = fnGetValue ( "tbChannel", "fdAbbreviate='" . (strcmp ($lsChannel, "美团") == 0 ? "mt" : "ele") . "'", "id" ) ;
+						if ( strcmp ( $lsStatus, "已完成" ) == 0 ) {
+						  $liOrders ++ ;
+							$liOrderID = fnGetValue ( "tbOrder", "fdSerial='$lsSerial'", "id" ) ;
+							if ( $liOrderID > 0 )
+								$lsSQL = "UPDATE tbOrder SET fdDatetime='$lsDatetime',fdRestaurantID=$liRestaurantID,fdChannelID=$liChannelID,fdSystemID=$liSystemID,fdAmount=$lsAmount WHERE fdSerial='$lsSerial'" ;
 							else
-							  $liCount = $lbMultiFoods ? 1 : $sheet->getCell ( "W$i")->getValue () ;
-							$liFoodID = fnGetValue ( "tbFood", "fdName='$lsFood'", "id" ) ;
-							if ( $liFoodID == 0 )
-								$liFoodID = fnGetValue ( "tbAlias", "fdName='$lsFood'", "fdFoodID" ) ;
-							if ( $liFoodID == 0 )
-								$liFoodID = fnGetValue ( "tbFood", "INSTR('$lsFood',fdName)>0", "id" ) ;
-							if ( $liFoodID == 0 )
-								$liFoodID = fnGetValue ( "tbAlias", "INSTR('$lsFood',fdName)>0", "fdFoodID" ) ;
-							if ( $liFoodID > 0 ) {
-						    if ( $lbMultiFoods ) {
-									$lfPrice = fnGetValue ( "tbPrice", "fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdFoodID=$liFoodID", "fdPrice" ) ;
-									if ( is_null ( $lfPrice ) ) {
-										$lfPrice = fnGetValue ( "tbRestaurant_Food", "fdRestaurantID=$liRestaurantID AND fdFoodID=$liFoodID", "fdPrice" ) ;
-										if ( is_null ( $lfPrice ) )
-										  $lfPrice = 0 ;
-									}
-									if ( $lfPrice == 0 )
-										$lfPrice = 0 + fnGetValue ( "tbFood", "id=$liFoodID", "fdPrice" ) ;
-									if ( $lfPrice == 0 )
-										print "Price missed, $lsFood(liFoodID=$liFoodID),$lsRestaurant,$lsChannel\r\n" ;
-									else {
-									  $lfOriginAmount += $lfPrice ;
-								    $arrFoodIDs[] = $liFoodID ;
-										$arrPrices[] = $lfPrice ;
-									}
+								$lsSQL = "INSERT INTO tbOrder (fdSerial,fdDatetime,fdRestaurantID,fdChannelID,fdSystemID,fdAmount ) VALUES ('$lsSerial','$lsDatetime',$liRestaurantID,$liChannelID,$liSystemID,$lsAmount)" ;
+							mysql_exec ( $lsSQL ) ;
+							if ( $liOrderID == 0 )
+								$liOrderID = mysqli_insert_id ( $dbLink ) ;
+							$lsSQL = "DELETE FROM tbOrder_Food WHERE fdOrderID=$liOrderID" ;
+							mysql_exec ( $lsSQL ) ;
+							// print "lsFoods=$lsFoods\r\n" ; 
+							$lbMultiFoods = $lbQuoted = false ;
+							for ( $j = 0; $j < mb_strlen ( $lsFoods ); $j ++ ) {
+								$chr = mb_substr ( $lsFoods, $j, 1 ) ;
+								if ( strcmp ( $chr, '[' ) == 0 )
+									$lbQuoted = true ;
+								else if ( strcmp ( $chr, ']' ) == 0 )
+									$lbQuoted = false ;
+								else if ( strcmp ( $chr, "+" ) == 0 ) {
+									if ( $lbQuoted )
+										$lsFoods = mb_substr ( $lsFoods, 0, $j ) . "&" . mb_substr ( $lsFoods, $j + 1 ) ;
+									else
+										$lbMultiFoods = true ;
 								}
-								$lsSQL = "INSERT INTO tbOrder_Food (fdOrderID,fdFoodID,fdCount,fdAmount,fdName) VALUES ($liOrderID,$liFoodID,$liCount,$lsAmount,'$lsFood')" ;
-								mysqli_query ( $dbLink, $lsSQL ) ;
-								if ( mysqli_errno ( $dbLink ) == 1062 ) {
-									$lsSQL = "UPDATE tbOrder_Food SET fdCount=fdCount+$liCount,fdAmount=fdAmount+$lsAmount WHERE fdOrderID=$liOrderID AND fdFoodID=$liFoodID" ;
+							}
+							$lfOriginAmount = 0 ;
+							$arrFoodIDs = array () ;
+							$arrPrices = array () ;
+							$lsFood = strtok ( $lsFoods, "+" ) ;
+							while ( $lsFood != false ) {
+								$liPos = mb_strpos ( $lsFood, '[' ) ;
+								if ( $liPos === false )
+									$liPos = mb_strpos ( $lsFood, '|' ) ;
+								if ( $liPos > 0 )
+									$lsFood = trim ( mb_substr ( $lsFood, 0, $liPos ) ) ;
+								if ( $gbUseXML )
+									$liCount = $lbMultiFoods ? 1 : $cells[22]->Data ;
+								else
+									$liCount = $lbMultiFoods ? 1 : $sheet->getCell ( "W$i")->getValue () ;
+								$liFoodID = fnGetValue ( "tbFood", "fdName='$lsFood'", "id" ) ;
+								if ( $liFoodID == 0 )
+									$liFoodID = fnGetValue ( "tbAlias", "fdName='$lsFood'", "fdFoodID" ) ;
+								if ( $liFoodID == 0 )
+									$liFoodID = fnGetValue ( "tbFood", "INSTR('$lsFood',fdName)>0", "id" ) ;
+								if ( $liFoodID == 0 )
+									$liFoodID = fnGetValue ( "tbAlias", "INSTR('$lsFood',fdName)>0", "fdFoodID" ) ;
+								if ( $liFoodID > 0 ) {
+									if ( $lbMultiFoods ) {
+										$lfPrice = fnGetValue ( "tbPrice", "fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdFoodID=$liFoodID", "fdPrice" ) ;
+										if ( is_null ( $lfPrice ) ) {
+											$lfPrice = fnGetValue ( "tbRestaurant_Food", "fdRestaurantID=$liRestaurantID AND fdFoodID=$liFoodID", "fdPrice" ) ;
+											if ( is_null ( $lfPrice ) )
+												$lfPrice = 0 ;
+										}
+										if ( $lfPrice == 0 )
+											$lfPrice = 0 + fnGetValue ( "tbFood", "id=$liFoodID", "fdPrice" ) ;
+										if ( $lfPrice == 0 )
+											print "Price missed, $lsFood(liFoodID=$liFoodID),$lsRestaurant,$lsChannel\r\n" ;
+										else {
+											$lfOriginAmount += $lfPrice ;
+											$arrFoodIDs[] = $liFoodID ;
+											$arrPrices[] = $lfPrice ;
+										}
+									}
+									$lsSQL = "INSERT INTO tbOrder_Food (fdOrderID,fdFoodID,fdCount,fdAmount,fdName) VALUES ($liOrderID,$liFoodID,$liCount,$lsAmount,'$lsFood')" ;
+									mysqli_query ( $dbLink, $lsSQL ) ;
+									if ( mysqli_errno ( $dbLink ) == 1062 ) {
+										$lsSQL = "UPDATE tbOrder_Food SET fdCount=fdCount+$liCount,fdAmount=fdAmount+$lsAmount WHERE fdOrderID=$liOrderID AND fdFoodID=$liFoodID" ;
+										mysql_exec ( $lsSQL ) ;
+									}
+									fnLog ($lsSQL ) ;
+									// $lsFoodMatched = fnGetValue ( "tbFood", "id=$liFoodID", "fdName" ) ;
+									// print ( "Matched $lsFood as $lsFoodMatched\r\n" ) ;
+								} else {
+									print ( "Unknown food $lsFood\r\n" ) ;
+								}
+								$lsFood = strtok ( "+" ) ;
+							}
+							if ( $lbMultiFoods ) {
+								for ( $j = 0; $j < count ($arrFoodIDs); $j ++ ) {
+									$lsSQL = "UPDATE tbOrder_Food SET fdAmount=" . ($arrPrices[$j] / $lfOriginAmount * $lsAmount) . " WHERE fdOrderID=$liOrderID AND fdFoodID=" . $arrFoodIDs[$j] ;
 									mysql_exec ( $lsSQL ) ;
 								}
-								fnLog ($lsSQL ) ;
-								// $lsFoodMatched = fnGetValue ( "tbFood", "id=$liFoodID", "fdName" ) ;
-								// print ( "Matched $lsFood as $lsFoodMatched\r\n" ) ;
-							} else {
-								print ( "Unknown food $lsFood\r\n" ) ;
 							}
-							$lsFood = strtok ( "+" ) ;
-						}
-						if ( $lbMultiFoods ) {
-						  for ( $j = 0; $j < count ($arrFoodIDs); $j ++ ) {
-							  $lsSQL = "UPDATE tbOrder_Food SET fdAmount=" . ($arrPrices[$j] / $lfOriginAmount * $lsAmount) . " WHERE fdOrderID=$liOrderID AND fdFoodID=" . $arrFoodIDs[$j] ;
-								mysql_exec ( $lsSQL ) ;
-							}
+						} else {
+							$lsSQL = "DELETE FROM tbOrder_Food WHERE fdOrderID IN (SELECT id FROM tbOrder WHERE fdDatetime='$lsDatetime' AND fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdSystemID=$liSystemID AND fdSerial='$lsSerial')" ;
+							mysql_exec ( $lsSQL ) ;
+							$lsSQL = "DELETE FROM tbOrder WHERE fdDatetime='$lsDatetime' AND fdRestaurantID=$liRestaurantID AND fdChannelID=$liChannelID AND fdSystemID=$liSystemID AND fdSerial='$lsSerial'" ;
+							mysql_exec ( $lsSQL ) ;
 						}
 					} // for i
 					print "$liOrders orders found\r\n" ;

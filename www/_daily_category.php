@@ -59,7 +59,9 @@
 				print "<td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td /><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
 			  $liServSummary += $rowDailyFoods["fdServCount"] ;
 			} else {
-				print "<td /><td /><td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
+	      if ( $lbCategoryReportOnly ) 
+				  print "<td />" ;
+				print "<td /><td align='center'>" . intval ($rowDailyFoods["fdServCount"]) . "</td><td align='right'>" . $rowDailyFoods["fdIncome"] . "</td></tr>\r\n" ;
 			  $liFoodSummary += $rowDailyFoods["fdServCount"] ;
 			}
 			$liIncomeSummary += $rowDailyFoods["fdIncome"] ;
@@ -68,7 +70,9 @@
 		$liFreeCount = fnGetValue ( "tbOrder", "fdDateTime>='$lsDate' AND fdDateTime<DATE_ADD('$lsDate', INTERVAL 1 DAY) AND fdFree>0" . ($liRestaurantID > 0 ? " AND fdRestaurantID=$liRestaurantID" : ""), "COUNT(id)" ) ;
 		$liServSummary += $liFreeCount ;
 	?>
-	<tr><td>散点</td><td /><td align="center"><?php print $liFreeCount; ?></td><td /><td align="right">n/a</td></tr>
+	<tr><td>散点</td>
+	<?php if ( $lbCategoryReportOnly ) print "<td />" ; ?>
+	<td align="center"><?php print $liFreeCount; ?></td><td /><td align="right">n/a</td></tr>
 	</tr><td>合计</td>
 	<?php
 	  if ( $lbCategoryReportOnly )

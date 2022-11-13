@@ -38,89 +38,95 @@
 		$objFridayDate = fnGetObject ( "tbWorkDay", "fdDate='$lsFridayDate'", "fdWork" ) ;
 		$lsMondayDate = Date ( "Y-m-d", strtotime ( $asDate ) + 72 * 3600 ) ;
 		$objMondayDate = fnGetObject ( "tbWorkDay", "fdDate='$lsMondayDate'", "fdWork" ) ;
-		$lsSQL = "SELECT id,fdName,fdProduct FROM tbFood" ;
+		// 食材的计划用量是依据配方表叠加的，需要先清零
+		$lsSQL = "UPDATE tbDailyFood SET fdPlanCount=0 WHERE fdRestaurantID=$liRestaurantID AND fdDate='$asDate'" ;
+		mysql_exec ( $lsSQL ) ;
+		// 先根据算法规则1-5逐个预测成品的销量
+		$lsSQL = "SELECT id,fdName FROM tbFood WHERE fdProduct>0" ;
 		$rsFood = mysql_exec ( $lsSQL ) ;
 		while ( $rowFood = mysqli_fetch_assoc ( $rsFood ) ) {
-			if ( $rowFood["fdProduct"] != 0 ) {
-				print "Predicting " . $rowFood["fdName"] . " for $asRestaurant at $asDate ... " ;
-			  /* 下一句执行算法规则1 */
-			  $lsSQL = "SELECT fdDate,fdServCount FROM tbDailyFood WHERE fdFoodID=" . $rowFood["id"] . " AND fdDate<'$asDate' AND fdDate>=DATE_ADD('$asDate',INTERVAL -$giReferDays DAY) AND fdRestaurantID=$liRestaurantID" ;
-				$liHistoryCount = $liReferDays = 0 ;
-				$rsDailyFood = mysql_exec ( $lsSQL ) ;
-				while ( $rowDailyFood = mysqli_fetch_assoc ( $rsDailyFood ) ) {
-				  $liSampleWeekDay = DATE ( 'w', strtotime ( $rowDailyFood["fdDate"] ) ) ;
-					if ( $liTargetWeekDay > 0 && $liTargetWeekDay < 6 && $liSampleWeekDay > 0 && $liSampleWeekDay < 6
-					    || ( $liTargetWeekDay < 1 || $liTargetWeekDay > 5 ) && ( $liSampleWeekDay < 1 || $liSampleWeekDay > 5 ) ) { // 算法规则3
-						// 算法规则2
-						// 先计算$rowDailyFood["fdDate"]这一天的权重 ; 						
-						if ( $liTargetWeekDay == $liSampleWeekDay )
-						  $liWeight = $giWeekDayWeight ;
-						else if ( strcmp ( $rowDailyFood["fdDate"], $lsLastDate ) == 0 )
-						  $liWeight = $giYesterdayWeight ;
-						else
-						  $liWeight = $giNormalWeight ;
-						$liReferDays += $liWeight ;
-						$liHistoryCount += $rowDailyFood["fdServCount"] * $liWeight ;
-					}
+			print "Predicting " . $rowFood["fdName"] . " for $asRestaurant at $asDate ... " ;
+			/* 下一句执行算法规则1 */
+			$lsSQL = "SELECT fdDate,fdServCount FROM tbDailyFood WHERE fdFoodID=" . $rowFood["id"] . " AND fdDate<'$asDate' AND fdDate>=DATE_ADD('$asDate',INTERVAL -$giReferDays DAY) AND fdRestaurantID=$liRestaurantID" ;
+			$liHistoryCount = $liReferDays = 0 ;
+			$rsDailyFood = mysql_exec ( $lsSQL ) ;
+			while ( $rowDailyFood = mysqli_fetch_assoc ( $rsDailyFood ) ) {
+				$liSampleWeekDay = DATE ( 'w', strtotime ( $rowDailyFood["fdDate"] ) ) ;
+				if ( $liTargetWeekDay > 0 && $liTargetWeekDay < 6 && $liSampleWeekDay > 0 && $liSampleWeekDay < 6
+						|| ( $liTargetWeekDay < 1 || $liTargetWeekDay > 5 ) && ( $liSampleWeekDay < 1 || $liSampleWeekDay > 5 ) ) { // 算法规则3
+					// 算法规则2
+					// 先计算$rowDailyFood["fdDate"]这一天的权重 ; 						
+					if ( $liTargetWeekDay == $liSampleWeekDay )
+						$liWeight = $giWeekDayWeight ;
+					else if ( strcmp ( $rowDailyFood["fdDate"], $lsLastDate ) == 0 )
+						$liWeight = $giYesterdayWeight ;
+					else
+						$liWeight = $giNormalWeight ;
+					$liReferDays += $liWeight ;
+					$liHistoryCount += $rowDailyFood["fdServCount"] * $liWeight ;
 				}
-				mysqli_free_result ( $rsDailyFood ) ;
-				if ( $liReferDays > 0 ) {
-					$lfPlanCount = $liHistoryCount / $liReferDays ;
-				  print "as $lfPlanCount\r\n" ;
-					// 算法规则4
-					if ( $liTargetWeekDay == 1 ) { // 要预测的那天是星期一
-						if ( !is_null ( $objMondayDate ) && $objMondayDate->fdWork == 0 ) {
-							$lfPlanCount *= ( 1 + $gfHolidayExtra ) ;
-							print "Holiday extra " . $gfHolidayExtra * 100 . "%\r\n" ;
-						} else {
-							$lfPlanCount *= ( 1 + $gfMondayExtra ) ;
-							print "Monday extra " . $gfMondayExtra * 100 . "%\r\n" ;
-						}
-					} else if ( $liTargetWeekDay == 5 ) { // 要预测的那天是星期五
-						if ( is_null ( $objNextDate ) || $objNextDate->fdWork == 0 ) {
-							if ( !is_null ( $objMondayDate ) && $objMondayDate->fdWork == 0 ) {
-								$lfPlanCount *= ( 1 - $gfHolidayReduce ) ;
-								print "Holiday reduce " . $gfHolidayReduce * 100 . "%\r\n" ;
-							} else {
-								$lfPlanCount *= ( 1 - $gfFridayReduce ) ;
-								print "Friday reduce " . $gfFridayReduce * 100 . "%\r\n" ;
-							}
-						}
-					}
-					// 算法规则5
-					if ( ! is_null ( $objWorkDay ) ) {
-					  if ( $objWorkDay->fdWork == 0 )
-						  $lfPlanCount = 0 ; // 工作日变休假
-						else {
-						  // 长假补班日子不需要作特别处理
-						}
-					} else if ( $liTargetWeekDay == 0 || $liTargetWeekDay == 6 ) {
-            $lfPlanCount = 0 ; // 正常休息日
+			}
+			mysqli_free_result ( $rsDailyFood ) ;
+			if ( $liReferDays > 0 ) {
+				$lfPlanCount = $liHistoryCount / $liReferDays ;
+				print "as $lfPlanCount\r\n" ;
+				// 算法规则4
+				if ( $liTargetWeekDay == 1 ) { // 要预测的那天是星期一
+					if ( !is_null ( $objMondayDate ) && $objMondayDate->fdWork == 0 ) {
+						$lfPlanCount *= ( 1 + $gfHolidayExtra ) ;
+						print "Holiday extra " . $gfHolidayExtra * 100 . "%\r\n" ;
 					} else {
-						if ( !is_null ( $objNextDate ) && $objNextDate.fdWork == 0 ) { // $asDate命中tbWorkDay前一天
-							$lfPlanCount *= ( 1 - $gfHolidayReduce ) ; // 长假前一天减量15%
+						$lfPlanCount *= ( 1 + $gfMondayExtra ) ;
+						print "Monday extra " . $gfMondayExtra * 100 . "%\r\n" ;
+					}
+				} else if ( $liTargetWeekDay == 5 ) { // 要预测的那天是星期五
+					if ( is_null ( $objNextDate ) || $objNextDate->fdWork == 0 ) {
+						if ( !is_null ( $objMondayDate ) && $objMondayDate->fdWork == 0 ) {
+							$lfPlanCount *= ( 1 - $gfHolidayReduce ) ;
 							print "Holiday reduce " . $gfHolidayReduce * 100 . "%\r\n" ;
 						} else {
-							if ( !is_null ( $objLastDate ) && $objLastDate.fdWork == 0 ) { // $asDate命中tbWorkDay后一天
-								$lfPlanCount *= ( 1 + $gfHolidayExtra ) ; // 长假后一天增量15%
-								print "Holiday extra " . $gfHolidayExtra * 100 . "%\r\n" ;
-					    }
+							$lfPlanCount *= ( 1 - $gfFridayReduce ) ;
+							print "Friday reduce " . $gfFridayReduce * 100 . "%\r\n" ;
 						}
 					}
-					/* 平均算法
-					$lfPlanCount = 0 + fnGetValue ( "tbDailyFood", "fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate<'$asDate' AND fdDate>=DATE_ADD('$asDate', INTERVAL -$giReferDays DAY)", "AVG(fdServCount)" ) ;
-					*/
-				} else
-				  $lfPlanCount = 0 ;
-				$objDailyFood = fnGetObject ( "tbDailyFood", "fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate='$asDate'", "id" ) ;
-				if ( is_null ( $objDailyFood ) && $lfPlanCount > 0 )
-				  $lsSQL = "INSERT INTO tbDailyFood (fdDate,fdFoodID,fdRestaurantID,fdPlanCount) VALUES ('$asDate'," . $rowFood["id"] . ",$liRestaurantID,$lfPlanCount)" ;
-				else
-				  $lsSQL = "UPDATE tbDailyFood SET fdPlanCount=$lfPlanCount+0 WHERE fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate='$asDate'" ;
-				mysql_exec ( $lsSQL ) ;
-				print "result $lfPlanCount\r\n" ;
+				}
+				// 算法规则5
+				if ( ! is_null ( $objWorkDay ) ) {
+					if ( $objWorkDay->fdWork == 0 )
+						$lfPlanCount = 0 ; // 工作日变休假
+					else {
+						// 长假补班日子不需要作特别处理
+					}
+				} else if ( $liTargetWeekDay == 0 || $liTargetWeekDay == 6 ) {
+					$lfPlanCount = 0 ; // 正常休息日
+				} else {
+					if ( !is_null ( $objNextDate ) && $objNextDate.fdWork == 0 ) { // $asDate命中tbWorkDay前一天
+						$lfPlanCount *= ( 1 - $gfHolidayReduce ) ; // 长假前一天减量15%
+						print "Holiday reduce " . $gfHolidayReduce * 100 . "%\r\n" ;
+					} else {
+						if ( !is_null ( $objLastDate ) && $objLastDate.fdWork == 0 ) { // $asDate命中tbWorkDay后一天
+							$lfPlanCount *= ( 1 + $gfHolidayExtra ) ; // 长假后一天增量15%
+							print "Holiday extra " . $gfHolidayExtra * 100 . "%\r\n" ;
+						}
+					}
+				}
+				/* 平均算法
+				$lfPlanCount = 0 + fnGetValue ( "tbDailyFood", "fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate<'$asDate' AND fdDate>=DATE_ADD('$asDate', INTERVAL -$giReferDays DAY)", "AVG(fdServCount)" ) ;
+				*/
 			} else
-		    print "Skip none product food " . $rowFood["fdName"] . "\r\n" ;
+				$lfPlanCount = 0 ;
+			$objDailyFood = fnGetObject ( "tbDailyFood", "fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate='$asDate'", "id" ) ;
+			if ( is_null ( $objDailyFood ) && $lfPlanCount > 0 )
+				$lsSQL = "INSERT INTO tbDailyFood (fdDate,fdFoodID,fdRestaurantID,fdPlanCount) VALUES ('$asDate'," . $rowFood["id"] . ",$liRestaurantID,$lfPlanCount)" ;
+			else
+				$lsSQL = "UPDATE tbDailyFood SET fdPlanCount=$lfPlanCount+0 WHERE fdRestaurantID=$liRestaurantID AND fdFoodID=" . $rowFood["id"] . " AND fdDate='$asDate'" ;
+			mysql_exec ( $lsSQL ) ;
+			print "result $lfPlanCount\r\n" ;
+		}
+		// 再根据配方表叠加计算每项非成品食材的消耗
+		$lsSQL = "SELECT tbFood.id,tbFood.fdName FROM tbFormula LEFT JOIN tbFood ON tbFood.id=tbFormula.fdRawFoodID" ;
+		$rsFood = mysql_exec ( $lsSQL ) ;
+		while ( $rowFood = mysqli_fetch_assoc ( $rsFood ) ) {
 		}
 		mysqli_free_result ( $rsFood ) ;
 	}

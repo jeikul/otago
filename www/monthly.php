@@ -12,7 +12,7 @@
 		td.weekend{ background: Lavender ;}
 	</style>
 	<?php
-		include_once "change_restaurant.php" ;
+		include_once "change_filter.php" ;
 	?>
 </head>
 <body>
@@ -27,28 +27,39 @@
 				$liRestaurantID = $objRestaurant->id ;
 				$lsRestaurant = $objRestaurant->fdName ;
 			}
-			if ( $_GET["month"] != "" )
-				$lsMonth = Date ( "Y-m", strtotime ( $_GET["month"] ) ) ;
+			$liChannelID = 0 ;
+			$lsChannel = "全部渠道" ;
+			$lsChannelSelected = "-1" ;
+			if ( $_GET["channel"] != "" ) {
+			  $lsChannelSelected = $_GET["channel"] ;
+				$objChannel = fnGetObject ( "tbChannel", "fdAbbreviate='$lsChannelSelected'", "id,fdName" ) ;
+				$liChannelID = $objChannel->id ;
+				$lsChannel = $objChannel->fdName ;
+			}
+			if ( $_GET["date"] != "" )
+				$lsMonth = Date ( "Y-m", strtotime ( $_GET["date"] ) ) ;
 			else
 				$lsMonth = Date ( "Y-m", time() - 15 * 24 * 3600 ) ;
-			print "<caption><select name=lstRestaurant onchange='fnChangeRestaurant()'>\r\n" ;
+			print "<caption><select name=lstRestaurant onchange='fnChangeFilter()'>\r\n" ;
 			fnFillList ( "SELECT fdAbbreviate,fdName FROM tbRestaurant", $lsRestaurantSelected, false, "全部门店" ) ;
+			print "<select name=lstChannel onchange='fnChangeFilter()'>\r\n" ;
+			fnFillList ( "SELECT fdAbbreviate,fdName FROM tbChannel", $lsChannelSelected, false, "全部渠道" ) ;
 			$ltDate = strtotime ( $lsMonth ) ;
 			$lsLastMonth = date ( 'Y-m', strtotime ( "last month", $ltDate ) ) ;
 			$lsNextMonth = date ( 'Y-m', strtotime ( "next month", $ltDate ) ) ;
 		?>
-		<br><a href="<?php print $_SERVER['PHP_SELF'] . "?month=$lsLastMonth" . ($_GET["restaurant"] != "" ? ("&restaurant=" . $_GET["restaurant"]) : "") ; ?>"> &lt;&lt;</a>
+		<br><a href="<?php print $_SERVER['PHP_SELF'] . "?date=$lsLastMonth" . ($_GET["restaurant"] != "" ? ("&restaurant=" . $_GET["restaurant"]) : "") . ($_GET["channel"] != "" ? ("&channel=" . $_GET["channel"]) : ""); ?>"> &lt;&lt;</a>
 		<input name=txtDate value="<?php print $lsMonth ; ?>" size=10 readonly="readonly">
-		<a href="<?php print $_SERVER['PHP_SELF'] . "?month=$lsNextMonth" . ($_GET["restaurant"] != "" ? ("&restaurant=" . $_GET["restaurant"]) : "") ; ?>"> &gt;&gt;</a>
+		<a href="<?php print $_SERVER['PHP_SELF'] . "?date=$lsNextMonth" . ($_GET["restaurant"] != "" ? ("&restaurant=" . $_GET["restaurant"]) : "") ; ?>"> &gt;&gt;</a>
 		<br>销售月报</caption>
 		<?php
-  		fnDrawA_Block ( $liRestaurantID ) ;
+  		fnDrawA_Block ( $liRestaurantID, $liChannelID ) ;
 		  if ( $liRestaurantID == 0 ) {
 			  $lsSQL = "SELECT id FROM tbRestaurant" ;
 				$rsRestaurant = mysql_exec ( $lsSQL ) ;
 				$i = 0 ;
 				while ( $rowRestaurant = mysqli_fetch_assoc ( $rsRestaurant ) ) {
-				  fnDrawA_Block ( $rowRestaurant["id"], $liRestaurantID > 0 && $i == 0 ) ;
+				  fnDrawA_Block ( $rowRestaurant["id"], $liChannelID, $liRestaurantID > 0 && $i == 0 ) ;
 					$i ++ ;
 				}
 				mysqli_free_result ( $rsRestaurant ) ;
@@ -102,14 +113,21 @@
 		print "</tr>\r\n" ;
 	}
 
-	function fnDrawA_Block ( $aiRestaurantID, $abDrawHeader = true )
+	function fnDrawA_Block ( $aiRestaurantID, $aiChannelID, $abDrawHeader = true )
   {
 	  global $lsMonth ;
 		$lsDate = $lsMonth . "-01" ;
-		if ( $aiRestaurantID > 0 )
-			$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,fdOrderCount,fdServCount,fdIncome,ROUND(fdIncome/fdOrderCount,2) AS AvgPrice FROM tbDailySummary WHERE fdRestaurantID=$aiRestaurantID AND fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
-		else
-			$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,SUM(fdOrderCount) AS fdOrderCount,SUM(fdServCount) AS fdServCount,SUM(fdIncome) AS fdIncome,ROUND(SUM(fdIncome)/SUM(fdOrderCount),2) AS AvgPrice FROM tbDailySummary GROUP BY fdDate HAVING fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
+		if ( $aiChannelID > 0 ) {
+			if ( $aiRestaurantID > 0 )
+				$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,fdOrderCount,fdServCount,fdIncome,ROUND(fdIncome/fdOrderCount,2) AS AvgPrice FROM tbDailyChannel WHERE fdRestaurantID=$aiRestaurantID AND fdChannelID=$aiChannelID AND fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
+			else
+				$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,SUM(fdOrderCount) AS fdOrderCount,SUM(fdServCount) AS fdServCount,SUM(fdIncome) AS fdIncome,ROUND(SUM(fdIncome)/SUM(fdOrderCount),2) AS AvgPrice FROM tbDailyChannel WHERE fdChannelID=$aiChannelID GROUP BY fdDate HAVING fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
+		} else {
+			if ( $aiRestaurantID > 0 )
+				$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,fdOrderCount,fdServCount,fdIncome,ROUND(fdIncome/fdOrderCount,2) AS AvgPrice FROM tbDailySummary WHERE fdRestaurantID=$aiRestaurantID AND fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
+			else
+				$lsSQL = "SELECT fdDate,DAY(fdDate) AS fdDay,SUM(fdOrderCount) AS fdOrderCount,SUM(fdServCount) AS fdServCount,SUM(fdIncome) AS fdIncome,ROUND(SUM(fdIncome)/SUM(fdOrderCount),2) AS AvgPrice FROM tbDailySummary GROUP BY fdDate HAVING fdDate>='$lsDate' AND fdDate<DATE_ADD('$lsDate', INTERVAL 1 MONTH) ORDER BY fdDate" ;
+		}
 		$rsDailySummary = mysql_exec ( $lsSQL ) ;
 		if ( $abDrawHeader )
 		  fnDrawA_Row ( $rsDailySummary, "日历", "fdDay", "center", "合计", "" ) ;
